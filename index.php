@@ -1,5 +1,15 @@
 <?php
  setlocale(LC_TIME, "tr_TR");
+ if (!isset($_SESSION['lang']))
+{
+    $_SESSION['lang'] = 'en';
+}
+
+if (isset($_GET['lang']))
+{
+    $_SESSION['lang'] = $_GET['lang'];
+}
+
 /**
  *  Pasthis - Stupid Simple Pastebin
  *
@@ -21,13 +31,40 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
  */
+ 
+require_once 'i18n.class.php';
+$i18n = new i18n('lang/lang_{LANGUAGE}.json', 'langcache/', 'en');
+$i18n->init();
 
-final class Pasthis {
+final class Pasthis extends i18n {
     public $title;
     private $contents = array();
     private $db;
-
-    function __construct($title = 'ABAP Paylaş') {
+	
+    private static $strings = [
+        'title' => [
+            'en' => 'Awesome Website!',
+            'es' => 'Impresionante sitio web!',
+        ],
+        'welcome' => [
+            'en' => 'Welcome to my awesome website!',
+            'es' => 'Bienvenidos a mi sitio web impresionante!',
+        ],
+        'about' => [
+            'en' => '
+                This website was built by me. I did not use FrontPage or
+                Dreamweaver to build it. When I grow up, I want to be a video
+                game tester for Valve.
+            ',
+            'es' => '
+                Este sitio web fue construido por mí. No hice uso de FrontPage
+                o Dreamweaver para construirlo. Cuando sea grande , quiero ser
+                un vídeo probador de juego de Valve.
+            ',
+        ],
+    ];
+	
+    function __construct($title = L::title) {
         $this->title = $title;
         $dsn = 'sqlite:' . dirname(__FILE__) .'/pastabap.db';
         try {
