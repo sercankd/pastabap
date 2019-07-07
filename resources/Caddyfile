@@ -1,0 +1,7 @@
+internal pasthis.db
+internal resources
+
+rewrite / {
+	regexp ([a-zA-Z0-9]{6}(@raw)?)$
+	to /index.php?p={1}
+}
