@@ -1,15 +1,5 @@
 <?php
  setlocale(LC_TIME, "tr_TR");
- if (!isset($_SESSION['lang']))
-{
-    $_SESSION['lang'] = 'en';
-}
-
-if (isset($_GET['lang']))
-{
-    $_SESSION['lang'] = $_GET['lang'];
-}
-
 /**
  *  Pasthis - Stupid Simple Pastebin
  *
@@ -31,40 +21,13 @@ if (isset($_GET['lang']))
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
  */
- 
-require_once 'i18n.class.php';
-$i18n = new i18n('lang/lang_{LANGUAGE}.json', 'langcache/', 'en');
-$i18n->init();
 
-final class Pasthis extends i18n {
+final class Pasthis {
     public $title;
     private $contents = array();
     private $db;
-	
-    private static $strings = [
-        'title' => [
-            'en' => 'Awesome Website!',
-            'es' => 'Impresionante sitio web!',
-        ],
-        'welcome' => [
-            'en' => 'Welcome to my awesome website!',
-            'es' => 'Bienvenidos a mi sitio web impresionante!',
-        ],
-        'about' => [
-            'en' => '
-                This website was built by me. I did not use FrontPage or
-                Dreamweaver to build it. When I grow up, I want to be a video
-                game tester for Valve.
-            ',
-            'es' => '
-                Este sitio web fue construido por mí. No hice uso de FrontPage
-                o Dreamweaver para construirlo. Cuando sea grande , quiero ser
-                un vídeo probador de juego de Valve.
-            ',
-        ],
-    ];
-	
-    function __construct($title = L::title) {
+
+    function __construct($title = 'ABAP Paylaş') {
         $this->title = $title;
         $dsn = 'sqlite:' . dirname(__FILE__) .'/pastabap.db';
         try {
@@ -111,7 +74,9 @@ final class Pasthis extends i18n {
         print'<meta name="viewport" content="width=device-width, initial-scale=1.0">';
         print '<title>'.htmlentities($this->title).'</title>';
         print '<link href="./css/style.css" rel="stylesheet" type="text/css" />';
+        //print '<link href="./css/prettify.css" rel="stylesheet" type="text/css" />';
 		print '<link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">';
+		print '<link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">';
         print '</head>';
         print '<body>';
         while (list(, $ct) = each($this->contents))
@@ -148,14 +113,16 @@ final class Pasthis extends i18n {
         $this->add_content(
             '<form method="post" action="." id="editForm">
                  <div id="left">
-				 <input type="text" class="form-style" id="title" name="ctitle" placeholder="Başlık">
+				 <input type="text" class="form-style" id="title" name="ctitle" autocomplete="off" placeholder="Başlık">
 				 <input type="hidden" id="d" name="d" value="-1"/>
 				 <button class="butt" type="submit"><i class="fa fa-paper-plane" aria-hidden="true"></i> Yolla gelsin</button>
                  </div>
                  <input type="text" id="sercankd" name="sercankd" placeholder="Do not fill me!" />
                  <div id="editor"></div>
 				<input type="hidden" id="editortext" name="editortext"/>
-             </form>'
+             </form>
+			 <footer class="footer"><div class="footer-left"><a href="https://sercan.xyz">sercankd</a> - '.date("Y").'</div> 
+									<div class="footer-right"><a href="./soneklenenler">Son eklenenler</a></div></footer>'
         );
         $this->add_content('<script src="./js/ace/src-noconflict/ace.js"></script>');
         $this->add_content('<script src="./js/ace/src-noconflict/ext-language_tools.js"></script>');
@@ -167,11 +134,13 @@ final class Pasthis extends i18n {
 								editor.getSession().setMode("ace/mode/abap");
 								editor.setShowPrintMargin(true);
 								editor.setPrintMarginColumn(72);
+								editor.setShowInvisibles(false);
 								editor.setOptions({
 								  fixedWidthGutter: true,
 								  enableBasicAutocompletion: true,
 								  enableSnippets: true,
-								  enableLiveAutocompletion: true
+								  enableLiveAutocompletion: true,
+								  showInvisibles: false
 								});
 								<!-- editor.setReadOnly(true); -->
 								// added event handler
@@ -182,7 +151,47 @@ final class Pasthis extends i18n {
 
         $this->render();
     }
+    function list_pastes() {
+        $fail = false;
+		
+		$result = $this->db->query('SELECT * FROM pastes ORDER BY creation_date DESC LIMIT 100');
 
+		if ($result == null) {
+            $fail = true;
+        }
+		if ($fail) {
+            $this->add_content('<div id="warning">hata :(</div>');
+            $this->prompt_paste();
+        }else{
+			$this->add_content(
+				'<div id="left"><h2>Son Eklenenler</h2></div>
+				 <div id="right">
+				 <span class="datetime"></span>
+				 <a class="button" href="./"><i class="fa fa-file" aria-hidden="true"></i> Yeni Kod Ekle</a> 
+				 </div>'
+			);
+			$this->add_content('<table class="pure-table pure-table-bordered pure-table-striped" style="clear: both; width: 100%; padding: 5px;">
+								<thead>
+									<tr>
+										<th>#id</th>
+										<th>Başlık</th>
+										<th>Tarih</th>
+									</tr>
+								</thead>
+								<tbody>');
+		while ($row = $result->fetch(\PDO::FETCH_ASSOC)) {
+			$this->add_content('<tr>
+									<td><a href="./'.$row['id'].'">'.$row['id'].'</a></td>
+									<td>'.$row['ctitle'].'</td>
+									<td>'.date("Y-m-d H:i:s", intval(substr($row['creation_date'], 0, 10))).'</td>
+								</tr>');
+        }
+			$this->add_content('</body></table>');
+			$this->add_content('<footer class="footer"><div class="footer-left"><a href="https://sercan.xyz">sercankd</a> - '.date("Y").'</div>');
+		}
+        $this->render();
+    }
+	
     private function generate_id() {
         $query = $this->db->prepare(
             "SELECT id FROM pastes
@@ -321,7 +330,6 @@ final class Pasthis extends i18n {
 					 <span class="datetime">'.$dt->format('d M Y H:i:s').'</span>
 					 <a class="button" href="./"><i class="fa fa-file" aria-hidden="true"></i> Yeni Kod Ekle</a> 
 					 <a class="button" href="./'.$id.'@raw"><i class="fa fa-font" aria-hidden="true"></i> Raw Görünüm</a> 
-					 
 					 </div>'
                 );
                 $class = 'prettyprint linenums';
@@ -329,6 +337,8 @@ final class Pasthis extends i18n {
                     // $class .= ' wrap';
 
                  $this->add_content('<div id="editor">'.htmlentities($result['paste']).'</div>');
+                 $this->add_content('<footer class="footer"><div class="footer-left"><a href="https://sercan.xyz">sercankd</a> - '.date("Y").'</div> 
+									<div class="footer-right"><a href="./soneklenenler">Son eklenenler</a></div></footer>');
         $this->add_content('<script src="./js/ace/src-noconflict/ace.js"></script>');
         $this->add_content('<script src="./js/ace/src-noconflict/ext-language_tools.js"></script>');
         $this->add_content('<script src="./js/trmix.min.js"></script>');
@@ -338,9 +348,10 @@ final class Pasthis extends i18n {
 								editor.getSession().setMode("ace/mode/abap");
 								editor.setShowPrintMargin(true);
 								editor.setPrintMarginColumn(72);
-								// editor.setOptions({
-								  // fixedWidthGutter: true,
-								// });
+								editor.setShowInvisibles(false);
+								 editor.setOptions({
+									showInvisibles: false
+								 });
 								editor.setReadOnly(true);
 							</script>');
             }
@@ -372,6 +383,8 @@ if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'on')
 
 if (isset($_GET['p']))
     $pastebin->show_paste($_GET['p']);
+elseif (isset($_GET['m']))
+    $pastebin->list_pastes();
 elseif (isset($_POST['d']) && isset($_POST['editortext']))
     $pastebin->add_paste($_POST['d'], $_POST['ctitle'], $_POST['editortext']);
 else

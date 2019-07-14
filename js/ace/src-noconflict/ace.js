@@ -5168,7 +5168,7 @@ var BidiHandler = function(session) {
     this.bidiUtil = bidiUtil;
     this.charWidths = [];
     this.EOL = "\xAC";
-    this.showInvisibles = true;
+    this.showInvisibles = false;
     this.isRtlDir = false;
     this.$isRtl = false;
     this.line = "";
@@ -16303,7 +16303,7 @@ var Text = function(parentEl) {
 
         this.showInvisibles = showInvisibles;
         this.$computeTabString();
-        return true;
+        return false;
     };
 
     this.displayIndentGuides = true;
